@@ -11,11 +11,19 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body data-theme="light">
+    <!-- Mobile Overlay -->
+    <div class="mobile-overlay" id="mobile-overlay"></div>
+
     <!-- Sidebar Navigation -->
-    <nav class="sidebar">
-        <div class="logo">
-            <img src="./logo.png" alt="Cashflow Logo" style="height: 32px; width: 32px; border-radius: 8px;">
-            <span>Cashflow</span>
+    <nav class="sidebar" id="sidebar">
+        <div class="sidebar-header">
+            <div class="logo">
+                <img src="./logo.png" alt="Cashflow Logo" style="height: 32px; width: 32px; border-radius: 8px;">
+                <span>Cashflow</span>
+            </div>
+            <button id="close-sidebar" class="mobile-close-btn">
+                <i class="fas fa-times"></i>
+            </button>
         </div>
         <div class="nav-links">
             <a href="#" class="nav-item active" data-view="dashboard">
@@ -60,8 +68,13 @@
         <!-- Top Header -->
         <header>
             <div class="header-left">
-                <h1 id="view-title">Dashboard Summary</h1>
-                <p id="view-subtitle" class="text-secondary">Welcome back, Argho!</p>
+                <button id="mobile-menu-toggle" class="mobile-menu-btn">
+                    <i class="fas fa-bars"></i>
+                </button>
+                <div>
+                    <h1 id="view-title">Dashboard Summary</h1>
+                    <p id="view-subtitle" class="text-secondary">Welcome back, Argho!</p>
+                </div>
             </div>
             <div class="user-profile">
                 <!-- Notifications Dropdown -->

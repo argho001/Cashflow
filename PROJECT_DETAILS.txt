@@ -1,0 +1,69 @@
+CASHFLOW - PREMIUM PERSONAL FINANCE MANAGEMENT SYSTEM
+===================================================
+
+Cashflow is a modern, secure, and comprehensive personal finance management 
+web application built with vanilla JavaScript, CSS, and HTML5, utilizing 
+Supabase for robust cloud-based authentication and real-time database management.
+
+CORE PURPOSE
+------------
+The project aims to empower users to take full control of their financial health 
+through an intuitive dashboard that tracks income, expenses, budgets, savings 
+goals, and investments in one place.
+
+KEY FEATURES
+------------
+1. SECURE AUTHENTICATION:
+   - Full user authentication system powered by Supabase.
+   - Secure Login and Signup functionality.
+   - Profile management with personalized avatars.
+
+2. DYNAMIC DASHBOARD:
+   - Real-time summary of Monthly Balance, Total Balance, Income, and Expenses.
+   - 7-Day Expense Trend charts (Stacked Bar Chart).
+   - Spending Breakdown by category (Doughnut Chart).
+
+3. TRANSACTION MANAGEMENT:
+   - Record and categorize daily transactions (Income and Expenses).
+   - View detailed transaction history sorted by date.
+   - Data is synced instantly to the cloud.
+
+4. BUDGET TRACKING:
+   - Set monthly spending limits for various categories.
+   - Visual progress bars showing current spending vs. budget limits.
+   - Automated alerts for exceeded budgets.
+
+5. FINANCIAL GOALS & AUTOMATION:
+   - Create and track progress towards specific savings goals (e.g., Emergency Fund, New Car).
+   - SMART AUTOMATION: Automatically distributes surplus funds from your balance into 
+     your active financial goals.
+
+6. INVESTMENT PORTFOLIO:
+   - Track various assets and investment categories.
+   - View invested amount vs. current valuation (with mock performance variation).
+
+7. PAYMENT REMINDERS:
+   - Set reminders for upcoming bills or payments.
+   - Visual countdowns and status tracking (Pending/Paid).
+   - Notifications for due and upcoming payments.
+
+8. ADDITIONAL CAPABILITIES:
+   - THEME ENGINE: Seamless switching between Dark and Light modes.
+   - EXPORT: Download transaction history as CSV for external analysis.
+   - RESPONSIVE DESIGN: Fully optimized for mobile, tablet, and desktop viewing.
+
+TECHNOLOGY STACK
+----------------
+- Frontend: HTML5, CSS3 (Vanilla), JavaScript (ES6+)
+- Charts: Chart.js
+- Backend: Supabase (Auth, Database)
+- Icons: Font Awesome
+- Deployment: Vercel Ready
+
+DEVELOPED FOR
+-------------
+CSE347 Project - Group 1
+- Debangshu Saha Arghya (2023-2-60-040)
+- Maharun Nesa Tanni (2023-1-60-190)
+- Kh Tania Akter Tamanna (2023-2-60-070)
+- Rumaia Hossain Katha (2021-1-60-107)
