@@ -1,0 +1,535 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cashflow | Personal Wealth Manager</title>
+    <link rel="stylesheet" href="index.css">
+    <!-- Font Awesome for Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Chart.js for Data Visualizations -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body data-theme="light">
+    <!-- Sidebar Navigation -->
+    <nav class="sidebar">
+        <div class="logo">
+            <img src="./logo.png" alt="Cashflow Logo" style="height: 32px; width: 32px; border-radius: 8px;">
+            <span>Cashflow</span>
+        </div>
+        <div class="nav-links">
+            <a href="#" class="nav-item active" data-view="dashboard">
+                <i class="fas fa-home"></i>
+                <span>Dashboard</span>
+            </a>
+            <a href="#" class="nav-item" data-view="transactions">
+                <i class="fas fa-exchange-alt"></i>
+                <span>Transactions</span>
+            </a>
+            <a href="#" class="nav-item" data-view="budgets">
+                <i class="fas fa-piggy-bank"></i>
+                <span>Budgets</span>
+            </a>
+            <a href="#" class="nav-item" data-view="goals">
+                <i class="fas fa-bullseye"></i>
+                <span>Goals</span>
+            </a>
+            <a href="#" class="nav-item" data-view="investments">
+                <i class="fas fa-chart-line"></i>
+                <span>Investments</span>
+            </a>
+            <a href="#" class="nav-item" data-view="reminders">
+                <i class="fas fa-clock"></i>
+                <span>Reminders</span>
+            </a>
+            <a href="#" class="nav-item" data-view="settings">
+                <i class="fas fa-cog"></i>
+                <span>Settings</span>
+            </a>
+        </div>
+        <div style="margin-top: auto; padding-top: 1.5rem; border-top: 1px solid var(--border-color);">
+            <a href="#" class="nav-item" onclick="logoutUser(); return false;" id="logout-btn" style="color: var(--danger);">
+                <i class="fas fa-sign-out-alt"></i>
+                <span>Log Out</span>
+            </a>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <main class="main-container">
+        <!-- Top Header -->
+        <header>
+            <div class="header-left">
+                <h1 id="view-title">Dashboard Summary</h1>
+                <p id="view-subtitle" class="text-secondary">Welcome back, Argho!</p>
+            </div>
+            <div class="user-profile">
+                <!-- Notifications Dropdown -->
+                <div class="notifications-container" style="position: relative;">
+                    <button class="theme-toggle" id="notification-toggle">
+                        <i class="fas fa-bell"></i>
+                        <span id="notif-badge" style="position: absolute; top: -5px; right: -5px; background: var(--danger); color: white; border-radius: 50%; font-size: 0.6rem; padding: 2px 5px; display: none;">0</span>
+                    </button>
+                    <div id="notif-dropdown" class="card" style="position: absolute; top: 100%; right: 0; width: 300px; display: none; z-index: 1000; margin-top: 0.5rem;">
+                        <div class="flex justify-between items-center mb-2">
+                            <h4>Notifications</h4>
+                            <button id="clear-notifications" style="background:none; border:none; color:var(--accent-color); font-size: 0.75rem; cursor:pointer;">Clear All</button>
+                        </div>
+                        <div id="notif-list" style="max-height: 200px; overflow-y: auto;">
+                            <!-- Injected by JS -->
+                            <p class="text-secondary" style="font-size: 0.8rem; text-align: center; padding: 1rem;">No new alerts.</p>
+                        </div>
+                    </div>
+                </div>
+                <button class="theme-toggle" id="theme-toggle">
+                    <i class="fas fa-moon"></i>
+                </button>
+                <div class="avatar">
+                    <img src="https://ui-avatars.com/api/?name=Argho&background=6366f1&color=fff" alt="User Profile" style="border-radius: 50%; width: 40px;">
+                </div>
+            </div>
+        </header>
+
+        <!-- View Containers -->
+        <div id="view-dashboard" class="view active">
+            <div class="dashboard-grid">
+                <!-- Summary Cards -->
+                <div class="card">
+                    <div class="flex justify-between items-center">
+                        <p class="text-secondary">Current Balance (monthly)</p>
+                        <button id="more-details-btn" class="theme-toggle" style="font-size: 0.7rem; padding: 2px 8px; border: 1px solid var(--border-color);">More</button>
+                    </div>
+                    <h2 class="mt-4" id="stat-monthly-balance">৳0.00</h2>
+                    <div id="total-balance-section" style="display: none; border-top: 1px solid var(--border-color); margin-top: 1rem; padding-top: 1rem; animation: slideDown 0.3s ease;">
+                        <p class="text-secondary" style="font-size: 0.8rem;">Total Balance (Lifetime)</p>
+                        <h3 id="stat-total-balance">৳0.00</h3>
+                    </div>
+                    <p id="balance-trend" class="text-success mt-4"><i class="fas fa-arrow-up"></i> +0% this month</p>
+                </div>
+                <div class="card">
+                    <p class="text-secondary">Monthly Income</p>
+                    <h2 class="mt-4 text-success" id="stat-income">৳0.00</h2>
+                    <div id="monthly-income-sources" class="mt-4" style="max-height: 100px; overflow-y: auto;">
+                        <!-- List of income sources for the month -->
+                    </div>
+                    <p class="text-secondary mt-4">Active source count: <span id="income-count">0</span></p>
+                </div>
+                <div class="card">
+                    <p class="text-secondary">Monthly Expenses</p>
+                    <h2 class="mt-4 text-danger" id="stat-expenses">৳0.00</h2>
+                    <p class="text-secondary mt-4" id="stat-expense-ratio">Spent 0% of monthly income</p>
+                </div>
+            </div>
+            
+            <div class="grid-2 mt-4" style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem;">
+                <div class="card">
+                    <h3>Spending Breakdown</h3>
+                    <div style="height: 300px; width: 100%; display: flex; align-items: center; justify-content: center;">
+                        <canvas id="spendingChart"></canvas>
+                    </div>
+                </div>
+                <div class="card">
+                    <h3>Expense Trend</h3>
+                    <div style="height: 300px; width: 100%; display: flex; align-items: center; justify-content: center;">
+                        <canvas id="trendChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div id="view-transactions" class="view">
+            <div class="card">
+                <div class="flex justify-between items-center mb-4">
+                    <h3>Recent Transactions</h3>
+                    <button class="btn-primary" id="add-transaction-btn">+ Add Transaction</button>
+                </div>
+                <table style="width: 100%; text-align: left; border-collapse: collapse;">
+                    <thead>
+                        <tr style="border-bottom: 1px solid var(--border-color);">
+                            <th style="padding: 1rem 0;">Date</th>
+                            <th>Description</th>
+                            <th>Category</th>
+                            <th>Amount</th>
+                        </tr>
+                    </thead>
+                    <tbody id="transaction-list">
+                        <!-- Transactions will be injected here -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <div id="view-budgets" class="view">
+            <div class="card mb-4">
+                <div class="flex justify-between items-center">
+                    <div>
+                        <h3>Budget Monthly Limits</h3>
+                        <p class="text-secondary">Set and monitor your monthly spending by category.</p>
+                    </div>
+                    <button class="btn-primary" id="add-budget-btn">+ Set Budget</button>
+                </div>
+            </div>
+            <div id="budget-list" class="dashboard-grid">
+                <!-- Budget cards will be injected here -->
+            </div>
+        </div>
+
+        <div id="view-goals" class="view">
+            <div class="card mb-4">
+                <div class="flex justify-between items-center">
+                    <div>
+                        <h3>Financial Goals</h3>
+                        <p class="text-secondary">Track long-term targets and savings progress.</p>
+                    </div>
+                    <div>
+                        <button class="btn-primary" id="add-goal-btn">+ Add New Goal</button>
+                    </div>
+                </div>
+            </div>
+            <div id="goals-list" class="dashboard-grid">
+                <!-- Goal cards will be injected here -->
+            </div>
+        </div>
+
+        <div id="view-investments" class="view">
+            <div class="card mb-4">
+                <div class="flex justify-between items-center">
+                    <div>
+                        <h3>Investment Portfolio</h3>
+                        <p class="text-secondary">Keep track of your assets and personal investments.</p>
+                    </div>
+                    <button class="btn-primary" id="add-investment-btn">+ Add Investment</button>
+                </div>
+            </div>
+            
+            <div class="card">
+                <h3>Current Holdings</h3>
+                <div style="overflow-x: auto;">
+                    <table style="width: 100%; text-align: left; border-collapse: collapse; margin-top: 1rem;">
+                        <thead>
+                            <tr style="border-bottom: 1px solid var(--border-color);">
+                                <th style="padding: 1rem 0;">Asset</th>
+                                <th>Category</th>
+                                <th>Amount Invested</th>
+                                <th>Estimated Value</th>
+                            </tr>
+                        </thead>
+                        <tbody id="investment-list">
+                            <!-- Injected by JS -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <div id="view-reminders" class="view">
+            <div class="card mb-4">
+                <div class="flex justify-between items-center">
+                    <div>
+                        <h3>Payment Reminders</h3>
+                        <p class="text-secondary">Track upcoming bills, rent, and subscriptions.</p>
+                    </div>
+                    <button class="btn-primary" id="add-reminder-btn">+ Add Reminder</button>
+                </div>
+            </div>
+            
+            <div id="reminders-list" style="display: grid; grid-template-columns: 1fr; gap: 1rem;">
+                <!-- Reminder cards will be injected here -->
+            </div>
+        </div>
+
+        <div id="view-settings" class="view">
+            <div class="grid-2" style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem;">
+                <div class="card" style="grid-column: span 2;">
+                    <h3>About Us</h3>
+                    <p class="text-secondary mb-6">Cashflow is developed by <strong>Group - 1</strong> as part of the CSE347 project. We aim to provide a modern, secure, and beautiful financial management experience.</p>
+                    
+                    <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 1rem;">
+                        <!-- Member 1 -->
+                        <div style="background: rgba(255,255,255,0.03); padding: 1.25rem; border-radius: 12px; border: 1px solid var(--border-color);">
+                            <div class="flex items-center gap-3 mb-2">
+                                <div style="width: 40px; height: 40px; background: var(--accent-color); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white;">
+                                    <i class="fas fa-user"></i>
+                                </div>
+                                <div>
+                                    <h4 style="font-size: 0.95rem; margin: 0;">Debangshu Saha Arghya</h4>
+                                    <p class="text-secondary" style="font-size: 0.8rem; margin: 0;">ID: 2023-2-60-040</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Member 2 -->
+                        <div style="background: rgba(255,255,255,0.03); padding: 1.25rem; border-radius: 12px; border: 1px solid var(--border-color);">
+                            <div class="flex items-center gap-3 mb-2">
+                                <div style="width: 40px; height: 40px; background: var(--success); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white;">
+                                    <i class="fas fa-user"></i>
+                                </div>
+                                <div>
+                                    <h4 style="font-size: 0.95rem; margin: 0;">Maharun Nesa Tanni</h4>
+                                    <p class="text-secondary" style="font-size: 0.8rem; margin: 0;">ID: 2023-1-60-190</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Member 3 -->
+                        <div style="background: rgba(255,255,255,0.03); padding: 1.25rem; border-radius: 12px; border: 1px solid var(--border-color);">
+                            <div class="flex items-center gap-3 mb-2">
+                                <div style="width: 40px; height: 40px; background: var(--warning); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white;">
+                                    <i class="fas fa-user"></i>
+                                </div>
+                                <div>
+                                    <h4 style="font-size: 0.95rem; margin: 0;">Kh Tania Akter Tamanna</h4>
+                                    <p class="text-secondary" style="font-size: 0.8rem; margin: 0;">ID: 2023-2-60-070</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Member 4 -->
+                        <div style="background: rgba(255,255,255,0.03); padding: 1.25rem; border-radius: 12px; border: 1px solid var(--border-color);">
+                            <div class="flex items-center gap-3 mb-2">
+                                <div style="width: 40px; height: 40px; background: var(--danger); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white;">
+                                    <i class="fas fa-user"></i>
+                                </div>
+                                <div>
+                                    <h4 style="font-size: 0.95rem; margin: 0;">Rumaia Hossain Katha</h4>
+                                    <p class="text-secondary" style="font-size: 0.8rem; margin: 0;">ID: 2021-1-60-107</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="card">
+                    <h3>Data Management</h3>
+                    <p class="text-secondary mb-4">Export your financial data or clear your local storage.</p>
+                    <div class="flex gap-2" style="display: flex; gap: 1rem; flex-wrap: wrap;">
+                        <button class="btn-primary" id="export-csv-btn">
+                            <i class="fas fa-file-csv"></i> Export CSV
+                        </button>
+                        <button class="btn-primary" style="background: #64748b;" id="export-pdf-btn">
+                            <i class="fas fa-file-pdf"></i> Export PDF
+                        </button>
+                        <button class="btn-primary" style="background: var(--danger);" id="clear-data-btn">
+                            <i class="fas fa-trash"></i> Reset Data
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <footer style="text-align: center; padding: 2rem 0; margin-top: 3rem; border-top: 1px solid var(--border-color); opacity: 0.6; font-size: 0.85rem; letter-spacing: 1px;">
+            Personal Finance Management System
+        </footer>
+    </main>
+
+    <!-- Modal for Adding Transactions -->
+    <div id="transaction-modal" class="modal-overlay">
+        <div class="modal-content card">
+            <div class="flex justify-between items-center mb-4">
+                <h3>Add New Transaction</h3>
+                <button id="close-modal" style="background:none; border:none; color:var(--text-secondary); cursor:pointer;">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <form id="transaction-form">
+                <div class="form-group">
+                    <label>Description</label>
+                    <input type="text" id="desc-input" placeholder="e.g. Salary, Rent, Grocery" required>
+                </div>
+                <div class="flex gap-2" style="display: flex; gap: 1rem;">
+                    <div class="form-group" style="flex: 1;">
+                        <label>Amount (৳)</label>
+                        <input type="number" id="amount-input" placeholder="0.00" required>
+                    </div>
+                    <div class="form-group" style="flex: 1;">
+                        <label>Type</label>
+                        <select id="type-input">
+                            <option value="expense">Expense</option>
+                            <option value="income">Income</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>Category</label>
+                    <select id="category-input">
+                        <option value="Income">Income / Salary</option>
+                        <option value="Food">Food & Dining</option>
+                        <option value="Housing">Housing & Rent</option>
+                        <option value="Transport">Transport</option>
+                        <option value="Entertainment">Entertainment</option>
+                        <option value="Health">Health & Fitness</option>
+                        <option value="Education">Education</option>
+                        <option value="Others">Others</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Date</label>
+                    <input type="date" id="date-input" required>
+                </div>
+                <button type="submit" class="btn-primary mt-4" style="width: 100%;">Save Transaction</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal for Budgets -->
+    <div id="budget-modal" class="modal-overlay">
+        <div class="modal-content card">
+            <div class="flex justify-between items-center mb-4">
+                <h3>Set Category Budget</h3>
+                <button class="close-modal" style="background:none; border:none; color:var(--text-secondary); cursor:pointer;">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <form id="budget-form">
+                <div class="form-group">
+                    <label>Category</label>
+                    <select id="budget-category">
+                        <option value="Food">Food & Dining</option>
+                        <option value="Housing">Housing & Rent</option>
+                        <option value="Transport">Transport</option>
+                        <option value="Entertainment">Entertainment</option>
+                        <option value="Health">Health & Fitness</option>
+                        <option value="Education">Education</option>
+                        <option value="Others">Others</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Monthly Limit (৳)</label>
+                    <input type="number" id="budget-limit" placeholder="5000" required>
+                </div>
+                <button type="submit" class="btn-primary mt-4" style="width: 100%;">Set Budget</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal for Goals -->
+    <div id="goal-modal" class="modal-overlay">
+        <div class="modal-content card">
+            <div class="flex justify-between items-center mb-4">
+                <h3 id="goal-modal-title">Add Financial Goal</h3>
+                <button class="close-modal" style="background:none; border:none; color:var(--text-secondary); cursor:pointer;">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <form id="goal-form">
+                <div class="form-group">
+                    <label>Goal Name</label>
+                    <input type="text" id="goal-name" placeholder="e.g. New Laptop, Emergency Fund" required>
+                </div>
+                <div class="form-group">
+                    <label>Target Amount (৳)</label>
+                    <input type="number" id="goal-amount" placeholder="80000" required>
+                </div>
+                <div class="form-group">
+                    <label>Deadline</label>
+                    <input type="date" id="goal-deadline" required>
+                </div>
+                <button type="submit" class="btn-primary mt-4" style="width: 100%;">Add Goal</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal for Investments -->
+    <div id="investment-modal" class="modal-overlay">
+        <div class="modal-content card">
+            <div class="flex justify-between items-center mb-4">
+                <h3>Add Investment</h3>
+                <button class="close-modal" style="background:none; border:none; color:var(--text-secondary); cursor:pointer;">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <form id="investment-form">
+                <div class="form-group">
+                    <label>Asset Name</label>
+                    <input type="text" id="asset-name" placeholder="e.g. Beximco Pharma, IDLC Fund" required>
+                </div>
+                <div class="form-group">
+                    <label>Amount Invested (৳)</label>
+                    <input type="number" id="invested-amount" placeholder="50000" required>
+                </div>
+                <div class="form-group">
+                    <label>Category</label>
+                    <select id="asset-category">
+                        <option value="Stocks">Stocks</option>
+                        <option value="Mutual Fund">Mutual Fund</option>
+                        <option value="Fixed Deposit">Fixed Deposit</option>
+                        <option value="Savings Plan">Savings Plan</option>
+                    </select>
+                </div>
+                <button type="submit" class="btn-primary mt-4" style="width: 100%;">Add Asset</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal for Reminders -->
+    <div id="reminder-modal" class="modal-overlay">
+        <div class="modal-content card">
+            <div class="flex justify-between items-center mb-4">
+                <h3>Add Reminder</h3>
+                <button class="close-modal" style="background:none; border:none; color:var(--text-secondary); cursor:pointer;">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <form id="reminder-form">
+                <div class="form-group">
+                    <label>Description</label>
+                    <input type="text" id="reminder-desc" placeholder="e.g. House Rent, Internet" required>
+                </div>
+                <div class="form-group">
+                    <label>Amount (৳)</label>
+                    <input type="number" id="reminder-amount" placeholder="1000" required>
+                </div>
+                <div class="form-group">
+                    <label>Due Date</label>
+                    <input type="date" id="reminder-date" required>
+                </div>
+                <button type="submit" class="btn-primary mt-4" style="width: 100%;">Save Reminder</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal for Profile Details -->
+    <div id="profile-modal" class="modal-overlay">
+        <div class="modal-content card" style="max-width: 400px;">
+            <div class="flex justify-between items-center mb-6">
+                <h3>Your Profile</h3>
+                <button class="close-modal" style="background:none; border:none; color:var(--text-secondary); cursor:pointer;">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            
+            <div style="text-align: center; margin-bottom: 2rem;">
+                <div id="profile-avatar-large" style="margin-bottom: 1rem;">
+                    <!-- Injected by JS -->
+                </div>
+                <h2 id="profile-full-name">User Name</h2>
+                <p id="profile-email" class="text-secondary">user@example.com</p>
+            </div>
+
+            <div style="background: rgba(255,255,255,0.03); padding: 1rem; border-radius: 12px; border: 1px solid var(--border-color);">
+                <div class="flex justify-between items-center mb-3">
+                    <span class="text-secondary" style="font-size: 0.85rem;">Account Status</span>
+                    <span class="text-success" style="font-size: 0.85rem; font-weight: 500;">Verified</span>
+                </div>
+                <div class="flex justify-between items-center mb-3">
+                    <span class="text-secondary" style="font-size: 0.85rem;">Member Since</span>
+                    <span id="profile-joined" style="font-size: 0.85rem;">-</span>
+                </div>
+                <div class="flex justify-between items-center">
+                    <span class="text-secondary" style="font-size: 0.85rem;">Account Provider</span>
+                    <span style="font-size: 0.85rem;">Supabase Auth</span>
+                </div>
+            </div>
+
+            <div class="mt-6 flex gap-2">
+                <button onclick="logoutUser()" class="btn-primary" style="flex: 1; background: var(--danger); border: none;">Log Out</button>
+                <button class="close-modal btn-primary" style="flex: 1; background: var(--border-color); color: var(--text-primary); border: none;">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="supabase-config.js"></script>
+    <script src="app.js"></script>
+</body>
+</html>

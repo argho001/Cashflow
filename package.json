@@ -1,0 +1,16 @@
+{
+  "name": "cashflow",
+  "version": "1.0.0",
+  "description": "Premium Personal Finance Management System",
+  "main": "index.html",
+  "scripts": {
+    "start": "serve .",
+    "dev": "serve ."
+  },
+  "keywords": [],
+  "author": "Group - 1",
+  "license": "ISC",
+  "devDependencies": {
+    "serve": "^14.2.3"
+  }
+}
