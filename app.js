@@ -467,8 +467,16 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
 
     function checkBudgets() {
+        const now = new Date();
+        const cm = now.getMonth();
+        const cy = now.getFullYear();
+
         state.budgets.forEach(b => {
-            const spent = state.transactions.filter(t => t.category === b.category && t.type === 'expense').reduce((sum, t) => sum + t.amount, 0);
+            const spent = state.transactions.filter(t => {
+                const d = new Date(t.date);
+                return d.getMonth() === cm && d.getFullYear() === cy && t.category === b.category && t.type === 'expense';
+            }).reduce((sum, t) => sum + t.amount, 0);
+
             if(spent > b.limit) {
                 const alertMsg = `Budget Exceeded: You've spent ৳${spent.toLocaleString()} on ${b.category} (Limit: ৳${b.limit.toLocaleString()})`;
                 if(!state.notifications.some(n => n.msg === alertMsg)) {
@@ -611,8 +619,16 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     function renderBudgets() {
         if (!budgetList) return;
+        const now = new Date();
+        const cm = now.getMonth();
+        const cy = now.getFullYear();
+
         budgetList.innerHTML = state.budgets.map(b => {
-            const spent = state.transactions.filter(t => t.category === b.category && t.type === 'expense').reduce((sum, t) => sum + t.amount, 0);
+            const spent = state.transactions.filter(t => {
+                const d = new Date(t.date);
+                return d.getMonth() === cm && d.getFullYear() === cy && t.category === b.category && t.type === 'expense';
+            }).reduce((sum, t) => sum + t.amount, 0);
+            
             const percent = Math.min((spent / b.limit) * 100, 100);
             return `<div class="card"><div class="flex justify-between items-center mb-2"><h4>${b.category}</h4><span>৳${spent.toLocaleString()}</span></div><div style="width: 100%; background: rgba(255,255,255,0.1); height: 8px; border-radius: 4px;"><div style="width: ${percent}%; background: ${spent > b.limit ? 'var(--danger)' : 'var(--accent-color)'}; height: 100%; border-radius: 4px;"></div></div><p class="mt-2 text-secondary" style="font-size:0.75rem;">Limit: ৳${b.limit.toLocaleString()}</p></div>`;
         }).join('');
