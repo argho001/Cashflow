@@ -514,6 +514,57 @@ document.addEventListener('DOMContentLoaded', async () => {
         let totalBalance = totalIncome - totalExpenses;
         if (totalBalance < monthlyBalance) totalBalance = monthlyBalance;
 
+        // Calculate Previous Month's Reference Balance (to-date)
+        const prevMonthDate = new Date(currentYear, currentMonth - 1, now.getDate());
+        const pm = prevMonthDate.getMonth();
+        const py = prevMonthDate.getFullYear();
+        const currentDay = now.getDate();
+
+        const prevMonthTransactionsToDate = state.transactions.filter(t => {
+            const d = new Date(t.date);
+            return d.getMonth() === pm && d.getFullYear() === py && d.getDate() <= currentDay;
+        });
+
+        const prevIncome = prevMonthTransactionsToDate.filter(t => t.type === 'income').reduce((sum, t) => sum + t.amount, 0);
+        const prevExpenses = prevMonthTransactionsToDate.filter(t => t.type === 'expense').reduce((sum, t) => sum + t.amount, 0);
+        const prevBalance = prevIncome - prevExpenses;
+
+        let trendPercent = 0;
+        if (prevBalance !== 0) {
+            trendPercent = Math.round(((monthlyBalance - prevBalance) / Math.abs(prevBalance)) * 100);
+        } else if (monthlyBalance !== 0) {
+            trendPercent = 100;
+        }
+
+        const trendEl = document.getElementById('balance-trend');
+        if (trendEl) {
+            const isPositive = trendPercent >= 0;
+            trendEl.className = isPositive ? 'text-success mt-4' : 'text-danger mt-4';
+            trendEl.innerHTML = `<i class="fas fa-arrow-${isPositive ? 'up' : 'down'}"></i> ${isPositive ? '+' : ''}${trendPercent}% this month`;
+        }
+
+        // Calculate Reference Lifetime Balance (to-date last month)
+        const refDate = new Date(currentYear, currentMonth - 1, now.getDate());
+        const refDateTransactions = state.transactions.filter(t => new Date(t.date) <= refDate);
+        const refTotalIncome = refDateTransactions.filter(t => t.type === 'income').reduce((sum, t) => sum + t.amount, 0);
+        const refTotalExpenses = refDateTransactions.filter(t => t.type === 'expense').reduce((sum, t) => sum + t.amount, 0);
+        const refTotalBalance = refTotalIncome - refTotalExpenses;
+
+        let totalTrendPercent = 0;
+        if (refTotalBalance !== 0) {
+            totalTrendPercent = Math.round(((totalBalance - refTotalBalance) / Math.abs(refTotalBalance)) * 100);
+        } else if (totalBalance !== 0) {
+            totalTrendPercent = 100;
+        }
+
+        const totalTrendEl = document.getElementById('total-balance-trend');
+        if (totalTrendEl) {
+            const isPos = totalTrendPercent >= 0;
+            totalTrendEl.className = isPos ? 'text-success mt-2' : 'text-danger mt-2';
+            totalTrendEl.style.fontSize = '0.75rem';
+            totalTrendEl.innerHTML = `<i class="fas fa-arrow-${isPos ? 'up' : 'down'}"></i> ${isPos ? '+' : ''}${totalTrendPercent}% vs last month`;
+        }
+
         document.getElementById('stat-monthly-balance').textContent = `৳${monthlyBalance.toLocaleString()}`;
         document.getElementById('stat-total-balance').textContent = `৳${totalBalance.toLocaleString()}`;
         document.getElementById('stat-income').textContent = `৳${income.toLocaleString()}`;
@@ -776,6 +827,12 @@ document.addEventListener('DOMContentLoaded', async () => {
             const isHidden = totalSection.style.display === 'none';
             totalSection.style.display = isHidden ? 'block' : 'none';
             moreBtn.textContent = isHidden ? 'Less' : 'More';
+            
+            // Hide the monthly trend when showing lifetime details to keep the card clean
+            const monthlyTrend = document.getElementById('balance-trend');
+            if (monthlyTrend) {
+                monthlyTrend.style.display = isHidden ? 'none' : 'block';
+            }
         });
     }
 
@@ -811,4 +868,138 @@ document.addEventListener('DOMContentLoaded', async () => {
             }
         });
     });
+
+    // === Detailed Trend Feature ===
+    let detailedTrendChart = null;
+
+    function renderDetailedChart() {
+        const yearSelect = document.getElementById('detailed-trend-year');
+        const monthSelect = document.getElementById('detailed-trend-month');
+        if (!yearSelect || !monthSelect) return;
+
+        const year = parseInt(yearSelect.value);
+        const month = parseInt(monthSelect.value);
+        
+        // Logical check: days in month
+        const lastDay = new Date(year, month + 1, 0).getDate();
+        const days = [];
+        for (let i = 1; i <= lastDay; i++) {
+            const dStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(i).padStart(2, '0')}`;
+            days.push(dStr);
+        }
+
+        const filteredData = state.transactions.filter(t => {
+            const d = new Date(t.date);
+            return d.getFullYear() === year && d.getMonth() === month && t.type === 'expense';
+        });
+
+        const trendCategories = [...new Set(filteredData.map(t => t.category))];
+        const chartColors = ['#6366f1', '#10b981', '#f59e0b', '#06b6d4', '#f43f5e', '#8b5cf6', '#ec4899'];
+
+        const datasets = trendCategories.map((cat, idx) => {
+            return {
+                label: cat,
+                data: days.map(date => {
+                    return filteredData
+                        .filter(t => t.date === date && t.category === cat)
+                        .reduce((sum, t) => sum + t.amount, 0);
+                }),
+                backgroundColor: chartColors[idx % chartColors.length],
+                borderRadius: 4
+            };
+        });
+
+        if (detailedTrendChart) detailedTrendChart.destroy();
+        const ctx = document.getElementById('detailedTrendChart');
+        if (ctx) {
+            detailedTrendChart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: days.map(d => new Date(d).getDate()),
+                    datasets: datasets
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            display: true,
+                            position: 'bottom',
+                            labels: {
+                                boxWidth: 10,
+                                padding: 15,
+                                color: state.isDarkMode ? '#94a3b8' : '#64748b',
+                                font: { size: 12 }
+                            }
+                        },
+                        tooltip: {
+                            mode: 'index',
+                            intersect: false,
+                            callbacks: {
+                                title: (items) => {
+                                    const day = items[0].label;
+                                    const monthName = new Intl.DateTimeFormat('en-US', { month: 'long' }).format(new Date(year, month));
+                                    return `${monthName} ${day}, ${year}`;
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        x: {
+                            stacked: true,
+                            grid: { display: false },
+                            ticks: { 
+                                color: '#94a3b8',
+                                font: { size: 10 }
+                            },
+                            title: { display: true, text: 'Day of Month', color: '#94a3b8' }
+                        },
+                        y: {
+                            stacked: true,
+                            beginAtZero: true,
+                            grid: { color: 'rgba(255,255,255,0.05)' },
+                            ticks: { color: '#94a3b8' },
+                            title: { display: true, text: 'Expense (৳)', color: '#94a3b8' }
+                        }
+                    }
+                }
+            });
+        }
+    }
+
+    const openDetailedBtn = document.getElementById('open-detailed-trend-btn');
+    const detailedTrendModal = document.getElementById('detailed-trend-modal');
+    const detailedYearSelect = document.getElementById('detailed-trend-year');
+    const detailedMonthSelect = document.getElementById('detailed-trend-month');
+
+    if (openDetailedBtn && detailedTrendModal) {
+        // Initialize Year selector
+        const currentYear = new Date().getFullYear();
+        for (let y = currentYear; y >= currentYear - 2; y--) {
+            const opt = document.createElement('option');
+            opt.value = y;
+            opt.textContent = y;
+            detailedYearSelect.appendChild(opt);
+        }
+        
+        // Set current month/year as default
+        detailedYearSelect.value = currentYear;
+        detailedMonthSelect.value = new Date().getMonth();
+
+        openDetailedBtn.addEventListener('click', () => {
+            detailedTrendModal.classList.add('active');
+            renderDetailedChart();
+        });
+
+        [detailedYearSelect, detailedMonthSelect].forEach(el => {
+            el.addEventListener('change', renderDetailedChart);
+        });
+
+        // Close on overlay click
+        detailedTrendModal.addEventListener('click', (e) => {
+            if (e.target === detailedTrendModal) {
+                detailedTrendModal.classList.remove('active');
+            }
+        });
+    }
 });
