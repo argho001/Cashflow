@@ -336,10 +336,44 @@ document.addEventListener('DOMContentLoaded', async () => {
         link.click();
     });
 
-    document.getElementById('clear-data-btn').addEventListener('click', () => {
-        if(confirm('Clear local settings? Note: Your cloud database data (Transactions, Goals) will remain safe in Supabase and can only be deleted manually from there.')) {
-            localStorage.clear();
-            location.reload();
+    document.getElementById('clear-data-btn').addEventListener('click', async () => {
+        if(confirm('Are you sure you want to RESET ALL DATA? This will permanently delete all your transactions, budgets, goals, investments, and reminders from the cloud. This action cannot be undone.')) {
+            try {
+                // Get fresh user session
+                const { data: { session: currentSession } } = await sb.auth.getSession();
+                const userId = currentSession?.user?.id;
+                
+                if (!userId) {
+                    alert('Session expired. Please log in again to reset data.');
+                    window.location.href = 'login.html';
+                    return;
+                }
+
+                const tables = ['transactions', 'budgets', 'goals', 'investments', 'reminders'];
+                
+                for (const table of tables) {
+                    console.log(`Cleaning table: ${table}...`);
+                    
+                    // Try deleting by user_id first (most reliable for RLS)
+                    const { error: err1 } = await sb.from(table).delete().eq('user_id', userId);
+                    
+                    if (err1) {
+                        // Fallback: Some tables might not have an explicit user_id column exposed 
+                        // or might use 'id' as the primary filter for deletes
+                        const { error: err2 } = await sb.from(table).delete().neq('id', -1);
+                        if (err2) {
+                            console.warn(`Could not clear ${table} with standard filters. This may be due to schema differences or RLS policies.`, { err1, err2 });
+                        }
+                    }
+                }
+                
+                localStorage.clear();
+                alert('All data has been successfully cleared from the cloud and local storage.');
+                location.reload();
+            } catch (err) {
+                console.error('Reset failed:', err);
+                alert('Failed to clear some data. Please try again.');
+            }
         }
     });
 

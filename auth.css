@@ -594,12 +594,28 @@ body:has(.auth-page) {
 /* Responsive */
 @media (max-width: 520px) {
     .auth-page {
-        padding: 1rem;
+        padding: 1.5rem 1rem;
+        display: block; /* Stack vertically if needed */
+        overflow-y: auto;
+    }
+    .auth-container {
+        margin-top: 2rem;
     }
     .auth-card {
         padding: 1.75rem 1.25rem;
     }
+    .auth-logo-icon img {
+        height: 36px;
+        width: 36px;
+    }
+    .auth-logo-icon span {
+        font-size: 1.5rem;
+    }
     .auth-social-btn span {
+        display: none;
+    }
+    /* Prevent orbs from causing scroll */
+    .auth-orb {
         display: none;
     }
 }
