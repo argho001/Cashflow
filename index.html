@@ -393,7 +393,7 @@
     <div id="budget-modal" class="modal-overlay">
         <div class="modal-content card">
             <div class="flex justify-between items-center mb-4">
-                <h3>Set Category Budget</h3>
+                <h3 id="budget-modal-title">Set Category Budget</h3>
                 <button class="close-modal" style="background:none; border:none; color:var(--text-secondary); cursor:pointer;">
                     <i class="fas fa-times"></i>
                 </button>
@@ -415,7 +415,7 @@
                     <label>Monthly Limit (৳)</label>
                     <input type="number" id="budget-limit" placeholder="5000" required>
                 </div>
-                <button type="submit" class="btn-primary mt-4" style="width: 100%;">Set Budget</button>
+                <button type="submit" id="budget-submit-btn" class="btn-primary mt-4" style="width: 100%;">Save Budget</button>
             </form>
         </div>
     </div>

@@ -380,3 +380,54 @@ button.btn-primary:hover {
         width: 32px !important;
     }
 }
+
+/* Action Buttons Styling */
+.card-actions {
+    position: absolute;
+    top: 1rem;
+    right: 1rem;
+    display: flex;
+    gap: 0.5rem;
+    opacity: 0;
+    transition: opacity 0.2s ease, transform 0.2s ease;
+    transform: translateY(-5px);
+}
+
+.card:hover .card-actions {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+.action-btn {
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid var(--border-color);
+    color: var(--text-secondary);
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.action-btn:hover {
+    background: rgba(99, 102, 241, 0.1);
+    color: var(--accent-color);
+    border-color: var(--accent-color);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(99, 102, 241, 0.2);
+}
+
+.action-btn.delete:hover {
+    background: rgba(244, 63, 94, 0.1);
+    color: var(--danger);
+    border-color: var(--danger);
+    box-shadow: 0 4px 12px rgba(244, 63, 94, 0.2);
+}
+
+[data-theme="light"] .action-btn {
+    background: rgba(0, 0, 0, 0.03);
+}
+

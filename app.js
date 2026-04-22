@@ -70,6 +70,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             }));
             
             checkReminders();
+            await autoDistributeGoals();
             refreshAll();
         } catch (error) {
             console.error('Error fetching data:', error);
@@ -95,8 +96,8 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // === Core Logic ===
 
-    function saveAndRefresh() {
-        autoDistributeGoals();
+    async function saveAndRefresh() {
+        await autoDistributeGoals();
         
         // Sync local preferences to localStorage still (non-sensitive)
         localStorage.setItem('riskLevel', state.riskLevel);
@@ -107,36 +108,36 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     // Auto Distribute Surplus
-    function autoDistributeGoals() {
-        // Enforce max capacity on goals
-        state.goals.forEach(g => {
-            if (g.current > g.target) g.current = g.target;
-        });
-
+    async function autoDistributeGoals() {
         const totalIncome = state.transactions.filter(t => t.type === 'income').reduce((sum, t) => sum + t.amount, 0);
         const totalExpenses = state.transactions.filter(t => t.type === 'expense').reduce((sum, t) => sum + t.amount, 0);
         const totalBalance = totalIncome - totalExpenses;
         
-        const totalGoalCurrent = state.goals.reduce((sum, g) => sum + g.current, 0);
-        let unallocated = totalBalance - totalGoalCurrent;
+        let goalsToUpdate = [];
 
-        if (unallocated > 0) {
-            let fundedGoals = [];
-            for (let goal of state.goals) {
-                if (unallocated <= 0) break;
-                const needed = goal.target - goal.current;
-                if (needed > 0) {
-                    const contribution = Math.min(unallocated, needed);
-                    goal.current += contribution;
-                    unallocated -= contribution;
-                    fundedGoals.push(goal.name);
-                }
+        for (let goal of state.goals) {
+            // In the "Shared Balance" model, each goal reflects how much of the total balance covers it
+            const newCurrent = Math.min(totalBalance, goal.target);
+            
+            // Only update if the value has changed
+            if (goal.current !== newCurrent) {
+                goal.current = newCurrent;
+                goalsToUpdate.push(goal);
             }
-            if (fundedGoals.length > 0) {
-                const msg = `Automated Savings: Allocated funds to ${fundedGoals.join(', ')}`;
-                if(!state.notifications.some(n => n.msg === msg)) {
-                    state.notifications.unshift({ id: Date.now(), msg: msg, time: 'Just now' });
-                }
+        }
+
+        // Persist changes to Supabase
+        if (goalsToUpdate.length > 0) {
+            for (let g of goalsToUpdate) {
+                const { error } = await sb.from('goals').update({ current: g.current }).eq('id', g.id);
+                if (error) console.error(`Error updating goal ${g.name}:`, error);
+            }
+            
+            // Optional: Notification could be simplified or removed as it's now a shared view
+            const msg = `Financial Goals updated based on your current balance of ৳${totalBalance.toLocaleString()}`;
+            if(!state.notifications.some(n => n.msg === msg)) {
+                state.notifications.unshift({ id: Date.now(), msg: msg, time: 'Just now' });
+                renderNotifications();
             }
         }
     }
@@ -189,6 +190,10 @@ document.addEventListener('DOMContentLoaded', async () => {
                     document.getElementById('transaction-modal-title').textContent = 'Add New Transaction';
                     document.getElementById('transaction-submit-btn').textContent = 'Save Transaction';
                     modals.transaction.form.reset();
+                } else if (key === 'budget') {
+                    document.getElementById('budget-modal-title').textContent = 'Set Category Budget';
+                    document.getElementById('budget-submit-btn').textContent = 'Save Budget';
+                    modals.budget.form.reset();
                 }
                 modals[key].overlay.classList.add('active');
             });
@@ -200,6 +205,61 @@ document.addEventListener('DOMContentLoaded', async () => {
             document.querySelectorAll('.modal-overlay').forEach(m => m.classList.remove('active'));
         });
     });
+
+    // === Event Delegation for Action Buttons ===
+    if (transactionList) {
+        transactionList.addEventListener('click', (e) => {
+            const btn = e.target.closest('.action-btn');
+            if (!btn) return;
+            const id = btn.getAttribute('data-id');
+            if (btn.classList.contains('delete')) {
+                window.deleteTransaction(id);
+            } else {
+                window.editTransaction(id);
+            }
+        });
+    }
+
+    if (budgetList) {
+        budgetList.addEventListener('click', (e) => {
+            const btn = e.target.closest('.action-btn');
+            if (!btn) return;
+            const category = btn.getAttribute('data-category');
+            const limit = btn.getAttribute('data-limit');
+            if (btn.classList.contains('delete')) {
+                window.deleteBudget(category);
+            } else {
+                window.editBudget(category, limit);
+            }
+        });
+    }
+
+    if (goalsList) {
+        goalsList.addEventListener('click', (e) => {
+            const btn = e.target.closest('.action-btn');
+            if (!btn) return;
+            const id = btn.getAttribute('data-id');
+            if (btn.classList.contains('delete')) {
+                window.deleteGoal(id);
+            } else {
+                window.editGoal(id);
+            }
+        });
+    }
+
+    if (document.getElementById('reminders-list')) {
+        document.getElementById('reminders-list').addEventListener('click', (e) => {
+            const btn = e.target.closest('.theme-toggle');
+            if (!btn) return;
+            const id = btn.getAttribute('data-id');
+            const action = btn.getAttribute('data-action');
+            if (action === 'delete') {
+                window.deleteReminder(id);
+            } else if (action === 'toggle') {
+                window.toggleReminder(id);
+            }
+        });
+    }
 
     // === View Navigation ===
     function switchView(viewId) {
@@ -278,10 +338,40 @@ document.addEventListener('DOMContentLoaded', async () => {
     };
 
     window.deleteTransaction = async (id) => {
+        if (!id || id === 'undefined') {
+            return alert('Error: Transaction ID is missing. Please refresh and try again.');
+        }
+
         if (confirm('Are you sure you want to delete this transaction?')) {
-            const { error } = await sb.from('transactions').delete().eq('id', id);
-            if (error) return alert('Error deleting transaction: ' + error.message);
-            await initializeData();
+            try {
+                // Use .select() to check if anything was actually deleted
+                let { data, error } = await sb.from('transactions').delete().eq('id', id).select();
+                
+                // If it failed and the ID is numeric, try parsing it
+                if ((!data || data.length === 0) && !error) {
+                    const numId = parseInt(id);
+                    if (!isNaN(numId)) {
+                        const { data: retryData, error: retryError } = await sb.from('transactions').delete().eq('id', numId).select();
+                        data = retryData;
+                        error = retryError;
+                    }
+                }
+
+                if (error) {
+                    console.error('Delete error:', error);
+                    return alert('Database Error: ' + error.message);
+                }
+                
+                if (!data || data.length === 0) {
+                    return alert('Delete failed: The transaction was not found or you do not have permission to delete it. Please check if you are logged in correctly.');
+                }
+                
+                alert('Transaction deleted successfully!');
+                location.reload(); // Force a full reload to ensure the UI is clean
+            } catch (err) {
+                console.error('Unexpected error during delete:', err);
+                alert('An unexpected error occurred: ' + err.message);
+            }
         }
     };
 
@@ -340,10 +430,42 @@ document.addEventListener('DOMContentLoaded', async () => {
     };
 
     window.deleteGoal = async (id) => {
+        if (!id || id === 'undefined') return alert('Error: Goal ID is missing.');
         if (confirm('Are you sure you want to delete this goal?')) {
-            const { error } = await sb.from('goals').delete().eq('id', id);
-            if (error) return alert('Error deleting goal: ' + error.message);
-            await initializeData();
+            const { data, error } = await sb.from('goals').delete().eq('id', id).select();
+            if (error) {
+                console.error('Delete goal error:', error);
+                return alert('Error deleting goal: ' + error.message);
+            }
+            if (!data || data.length === 0) {
+                return alert('Delete failed: Goal not found or access denied.');
+            }
+            alert('Goal deleted successfully!');
+            location.reload();
+        }
+    };
+
+    window.editBudget = (category, limit) => {
+        document.getElementById('budget-category').value = category;
+        document.getElementById('budget-limit').value = limit;
+        document.getElementById('budget-modal-title').textContent = 'Edit Budget';
+        document.getElementById('budget-submit-btn').textContent = 'Update Budget';
+        modals.budget.overlay.classList.add('active');
+    };
+
+    window.deleteBudget = async (category) => {
+        if (!category) return alert('Error: Category is missing.');
+        if (confirm(`Are you sure you want to delete the budget for ${category}?`)) {
+            const { data, error } = await sb.from('budgets').delete().eq('category', category).select();
+            if (error) {
+                console.error('Delete budget error:', error);
+                return alert('Error deleting budget: ' + error.message);
+            }
+            if (!data || data.length === 0) {
+                return alert('Delete failed: Budget not found or access denied.');
+            }
+            alert('Budget deleted successfully!');
+            location.reload();
         }
     };
 
@@ -449,10 +571,18 @@ document.addEventListener('DOMContentLoaded', async () => {
     };
 
     window.deleteReminder = async (id) => {
+        if (!id || id === 'undefined') return alert('Error: Reminder ID is missing.');
         if (confirm('Are you sure you want to delete this reminder?')) {
-            const { error } = await sb.from('reminders').delete().eq('id', id);
-            if (error) return alert('Error deleting reminder: ' + error.message);
-            await initializeData();
+            const { data, error } = await sb.from('reminders').delete().eq('id', id).select();
+            if (error) {
+                console.error('Delete reminder error:', error);
+                return alert('Error deleting reminder: ' + error.message);
+            }
+            if (!data || data.length === 0) {
+                return alert('Delete failed: Reminder not found or access denied.');
+            }
+            alert('Reminder deleted successfully!');
+            location.reload();
         }
     };
 
@@ -610,8 +740,10 @@ document.addEventListener('DOMContentLoaded', async () => {
                     ${t.type === 'expense' ? '-' : '+'}৳${t.amount.toLocaleString()}
                 </td>
                 <td style="text-align: right;">
-                    <button onclick="editTransaction('${t.id}')" style="background:none; border:none; color:var(--text-secondary); cursor:pointer; margin-right: 0.5rem;"><i class="fas fa-edit"></i></button>
-                    <button onclick="deleteTransaction('${t.id}')" style="background:none; border:none; color:var(--danger); cursor:pointer;"><i class="fas fa-trash"></i></button>
+                    <div style="display: flex; justify-content: flex-end; gap: 0.5rem;">
+                        <button class="action-btn" data-id="${t.id}" title="Edit"><i class="fas fa-edit"></i></button>
+                        <button class="action-btn delete" data-id="${t.id}" title="Delete"><i class="fas fa-trash"></i></button>
+                    </div>
                 </td>
             </tr>
         `).join('') : `<tr><td colspan="5" style="text-align:center; padding: 1rem;">No transactions recorded yet.</td></tr>`;
@@ -630,7 +762,21 @@ document.addEventListener('DOMContentLoaded', async () => {
             }).reduce((sum, t) => sum + t.amount, 0);
             
             const percent = Math.min((spent / b.limit) * 100, 100);
-            return `<div class="card"><div class="flex justify-between items-center mb-2"><h4>${b.category}</h4><span>৳${spent.toLocaleString()}</span></div><div style="width: 100%; background: rgba(255,255,255,0.1); height: 8px; border-radius: 4px;"><div style="width: ${percent}%; background: ${spent > b.limit ? 'var(--danger)' : 'var(--accent-color)'}; height: 100%; border-radius: 4px;"></div></div><p class="mt-2 text-secondary" style="font-size:0.75rem;">Limit: ৳${b.limit.toLocaleString()}</p></div>`;
+            return `
+                <div class="card" style="position: relative;">
+                    <div class="card-actions">
+                        <button class="action-btn" data-category="${b.category}" data-limit="${b.limit}" title="Edit"><i class="fas fa-edit"></i></button>
+                        <button class="action-btn delete" data-category="${b.category}" title="Delete"><i class="fas fa-trash"></i></button>
+                    </div>
+                    <div class="flex justify-between items-center mb-2">
+                        <h4>${b.category}</h4>
+                        <span>৳${spent.toLocaleString()}</span>
+                    </div>
+                    <div style="width: 100%; background: rgba(255,255,255,0.1); height: 8px; border-radius: 4px;">
+                        <div style="width: ${percent}%; background: ${spent > b.limit ? 'var(--danger)' : 'var(--accent-color)'}; height: 100%; border-radius: 4px;"></div>
+                    </div>
+                    <p class="mt-2 text-secondary" style="font-size:0.75rem;">Limit: ৳${b.limit.toLocaleString()}</p>
+                </div>`;
         }).join('');
     }
 
@@ -640,9 +786,9 @@ document.addEventListener('DOMContentLoaded', async () => {
             const percent = Math.min((g.current / g.target) * 100, 100);
             return `
                 <div class="card" style="position: relative;">
-                    <div style="position: absolute; top: 1rem; right: 1rem; display: flex; gap: 0.5rem;">
-                        <button onclick="editGoal('${g.id}')" style="background:none; border:none; color:var(--text-secondary); cursor:pointer;"><i class="fas fa-edit"></i></button>
-                        <button onclick="deleteGoal('${g.id}')" style="background:none; border:none; color:var(--danger); cursor:pointer;"><i class="fas fa-trash"></i></button>
+                    <div class="card-actions">
+                        <button class="action-btn" data-id="${g.id}" title="Edit"><i class="fas fa-edit"></i></button>
+                        <button class="action-btn delete" data-id="${g.id}" title="Delete"><i class="fas fa-trash"></i></button>
                     </div>
                     <h4>${g.name}</h4>
                     <p class="text-secondary mb-2">Target: ৳${g.target.toLocaleString()}</p>
@@ -810,10 +956,10 @@ document.addEventListener('DOMContentLoaded', async () => {
                         </div>
                     </div>
                     <div class="flex gap-2">
-                        <button onclick="toggleReminder('${r.id}')" class="theme-toggle" style="color: ${r.status === 'Paid' ? 'var(--text-secondary)' : 'var(--success)'}">
+                        <button data-id="${r.id}" data-action="toggle" class="theme-toggle" style="color: ${r.status === 'Paid' ? 'var(--text-secondary)' : 'var(--success)'}">
                             <i class="fas ${r.status === 'Paid' ? 'fa-undo' : 'fa-check'}"></i>
                         </button>
-                        <button onclick="deleteReminder('${r.id}')" class="theme-toggle" style="color: var(--danger)">
+                        <button data-id="${r.id}" data-action="delete" class="theme-toggle" style="color: var(--danger)">
                             <i class="fas fa-trash"></i>
                         </button>
                     </div>
@@ -832,7 +978,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // Initial Load
     initializeData();
-    autoDistributeGoals();
+    // autoDistributeGoals is called within initializeData()
     refreshAll();
 
     // More Details Toggle
