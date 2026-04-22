@@ -45,6 +45,8 @@ document.addEventListener('DOMContentLoaded', async () => {
         reminders: []
     };
 
+    let editingTransactionId = null;
+
     // Helper to fetch all data from Supabase
     async function initializeData() {
         try {
@@ -180,7 +182,37 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     Object.keys(modals).forEach(key => {
-        if(modals[key].btn && key !== 'profile') modals[key].btn.addEventListener('click', () => modals[key].overlay.classList.add('active'));
+        if(modals[key].btn && key !== 'profile') {
+            modals[key].btn.addEventListener('click', () => {
+                if (key === 'transaction') {
+                    editingTransactionId = null;
+                    document.getElementById('transaction-modal-title').textContent = '# Walkthrough - UI Interaction & ID Handling Fix
+
+I have resolved the issue where the "Edit" and "Delete" buttons were not functioning correctly.
+
+## Changes Made
+
+### Robust ID Handling
+The primary issue was that database IDs (which are often UUID strings in Supabase) were being passed to event handlers without quotes in the HTML, causing JavaScript syntax errors. Additionally, strict equality checks (`===`) were failing when comparing string IDs with numeric or mixed types.
+
+- **HTML Rendering**: Updated `renderTransactions`, `renderGoals`, and `renderReminders` to properly wrap all IDs in single quotes when generating the `onclick` attributes (e.g., `editTransaction('${t.id}')`).
+- **Logic Functions**: Updated `editTransaction`, `editGoal`, and `toggleReminder` to use string-based comparison (`String(t.id) === String(id)`) to ensure matching works regardless of the source type.
+
+## Verification
+
+### Implementation Details
+- **app.js**: Applied quotes in all six `onclick` generation spots.
+- **app.js**: Updated three `.find()` calls to use robust string comparison.
+
+> [!NOTE]
+> These changes make the application more resilient to different database ID formats and prevent standard JavaScript reference errors in the browser console.
+';
+                    document.getElementById('transaction-submit-btn').textContent = 'Save Transaction';
+                    modals.transaction.form.reset();
+                }
+                modals[key].overlay.classList.add('active');
+            });
+        }
     });
 
     document.querySelectorAll('.close-modal, #close-modal').forEach(btn => {
@@ -226,7 +258,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     // === Form & Button Handlers ===
     modals.transaction.form.addEventListener('submit', async (e) => {
         e.preventDefault();
-        const newTransaction = {
+        const transactionData = {
             description: document.getElementById('desc-input').value,
             amount: Math.abs(parseFloat(document.getElementById('amount-input').value)),
             type: document.getElementById('type-input').value,
@@ -234,13 +266,44 @@ document.addEventListener('DOMContentLoaded', async () => {
             date: document.getElementById('date-input').value
         };
 
-        const { error } = await sb.from('transactions').insert([newTransaction]);
-        if (error) return alert('Error saving transaction: ' + error.message);
+        if (editingTransactionId) {
+            const { error } = await sb.from('transactions').update(transactionData).eq('id', editingTransactionId);
+            if (error) return alert('Error updating transaction: ' + error.message);
+            editingTransactionId = null;
+        } else {
+            const { error } = await sb.from('transactions').insert([transactionData]);
+            if (error) return alert('Error saving transaction: ' + error.message);
+        }
 
         await initializeData();
         e.target.reset();
         modals.transaction.overlay.classList.remove('active');
     });
+
+    window.editTransaction = (id) => {
+        const transaction = state.transactions.find(t => String(t.id) === String(id));
+        if (!transaction) return;
+
+        editingTransactionId = id;
+        document.getElementById('desc-input').value = transaction.description;
+        document.getElementById('amount-input').value = transaction.amount;
+        document.getElementById('type-input').value = transaction.type;
+        document.getElementById('category-input').value = transaction.category;
+        document.getElementById('date-input').value = transaction.date;
+
+        document.getElementById('transaction-modal-title').textContent = 'Edit Transaction';
+        document.getElementById('transaction-submit-btn').textContent = 'Update Transaction';
+        
+        modals.transaction.overlay.classList.add('active');
+    };
+
+    window.deleteTransaction = async (id) => {
+        if (confirm('Are you sure you want to delete this transaction?')) {
+            const { error } = await sb.from('transactions').delete().eq('id', id);
+            if (error) return alert('Error deleting transaction: ' + error.message);
+            await initializeData();
+        }
+    };
 
     modals.budget.form.addEventListener('submit', async (e) => {
         e.preventDefault();
@@ -284,7 +347,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
 
     window.editGoal = (id) => {
-        const goal = state.goals.find(g => g.id === id);
+        const goal = state.goals.find(g => String(g.id) === String(id));
         if (!goal) return;
 
         editingGoalId = id;
@@ -396,7 +459,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
 
     window.toggleReminder = async (id) => {
-        const r = state.reminders.find(rem => rem.id === id);
+        const r = state.reminders.find(rem => String(rem.id) === String(id));
         if (r) {
             const newStatus = r.status === 'Pending' ? 'Paid' : 'Pending';
             const { error } = await sb.from('reminders').update({ status: newStatus }).eq('id', id);
@@ -507,8 +570,12 @@ document.addEventListener('DOMContentLoaded', async () => {
                 <td class="${t.type === 'expense' ? 'text-danger' : 'text-success'}">
                     ${t.type === 'expense' ? '-' : '+'}৳${t.amount.toLocaleString()}
                 </td>
+                <td style="text-align: right;">
+                    <button onclick="editTransaction('${t.id}')" style="background:none; border:none; color:var(--text-secondary); cursor:pointer; margin-right: 0.5rem;"><i class="fas fa-edit"></i></button>
+                    <button onclick="deleteTransaction('${t.id}')" style="background:none; border:none; color:var(--danger); cursor:pointer;"><i class="fas fa-trash"></i></button>
+                </td>
             </tr>
-        `).join('') : `<tr><td colspan="4" style="text-align:center; padding: 1rem;">No transactions recorded yet.</td></tr>`;
+        `).join('') : `<tr><td colspan="5" style="text-align:center; padding: 1rem;">No transactions recorded yet.</td></tr>`;
     }
 
     function renderBudgets() {
@@ -527,8 +594,8 @@ document.addEventListener('DOMContentLoaded', async () => {
             return `
                 <div class="card" style="position: relative;">
                     <div style="position: absolute; top: 1rem; right: 1rem; display: flex; gap: 0.5rem;">
-                        <button onclick="editGoal(${g.id})" style="background:none; border:none; color:var(--text-secondary); cursor:pointer;"><i class="fas fa-edit"></i></button>
-                        <button onclick="deleteGoal(${g.id})" style="background:none; border:none; color:var(--danger); cursor:pointer;"><i class="fas fa-trash"></i></button>
+                        <button onclick="editGoal('${g.id}')" style="background:none; border:none; color:var(--text-secondary); cursor:pointer;"><i class="fas fa-edit"></i></button>
+                        <button onclick="deleteGoal('${g.id}')" style="background:none; border:none; color:var(--danger); cursor:pointer;"><i class="fas fa-trash"></i></button>
                     </div>
                     <h4>${g.name}</h4>
                     <p class="text-secondary mb-2">Target: ৳${g.target.toLocaleString()}</p>
@@ -696,10 +763,10 @@ document.addEventListener('DOMContentLoaded', async () => {
                         </div>
                     </div>
                     <div class="flex gap-2">
-                        <button onclick="toggleReminder(${r.id})" class="theme-toggle" style="color: ${r.status === 'Paid' ? 'var(--text-secondary)' : 'var(--success)'}">
+                        <button onclick="toggleReminder('${r.id}')" class="theme-toggle" style="color: ${r.status === 'Paid' ? 'var(--text-secondary)' : 'var(--success)'}">
                             <i class="fas ${r.status === 'Paid' ? 'fa-undo' : 'fa-check'}"></i>
                         </button>
-                        <button onclick="deleteReminder(${r.id})" class="theme-toggle" style="color: var(--danger)">
+                        <button onclick="deleteReminder('${r.id}')" class="theme-toggle" style="color: var(--danger)">
                             <i class="fas fa-trash"></i>
                         </button>
                     </div>

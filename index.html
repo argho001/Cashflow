@@ -163,6 +163,7 @@
                             <th>Description</th>
                             <th>Category</th>
                             <th>Amount</th>
+                            <th style="text-align: right;">Actions</th>
                         </tr>
                     </thead>
                     <tbody id="transaction-list">
@@ -339,7 +340,7 @@
     <div id="transaction-modal" class="modal-overlay">
         <div class="modal-content card">
             <div class="flex justify-between items-center mb-4">
-                <h3>Add New Transaction</h3>
+                <h3 id="transaction-modal-title">Add New Transaction</h3>
                 <button id="close-modal" style="background:none; border:none; color:var(--text-secondary); cursor:pointer;">
                     <i class="fas fa-times"></i>
                 </button>
@@ -379,7 +380,7 @@
                     <label>Date</label>
                     <input type="date" id="date-input" required>
                 </div>
-                <button type="submit" class="btn-primary mt-4" style="width: 100%;">Save Transaction</button>
+                <button type="submit" id="transaction-submit-btn" class="btn-primary mt-4" style="width: 100%;">Save Transaction</button>
             </form>
         </div>
     </div>
