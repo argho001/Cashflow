@@ -186,27 +186,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             modals[key].btn.addEventListener('click', () => {
                 if (key === 'transaction') {
                     editingTransactionId = null;
-                    document.getElementById('transaction-modal-title').textContent = '# Walkthrough - UI Interaction & ID Handling Fix
-
-I have resolved the issue where the "Edit" and "Delete" buttons were not functioning correctly.
-
-## Changes Made
-
-### Robust ID Handling
-The primary issue was that database IDs (which are often UUID strings in Supabase) were being passed to event handlers without quotes in the HTML, causing JavaScript syntax errors. Additionally, strict equality checks (`===`) were failing when comparing string IDs with numeric or mixed types.
-
-- **HTML Rendering**: Updated `renderTransactions`, `renderGoals`, and `renderReminders` to properly wrap all IDs in single quotes when generating the `onclick` attributes (e.g., `editTransaction('${t.id}')`).
-- **Logic Functions**: Updated `editTransaction`, `editGoal`, and `toggleReminder` to use string-based comparison (`String(t.id) === String(id)`) to ensure matching works regardless of the source type.
-
-## Verification
-
-### Implementation Details
-- **app.js**: Applied quotes in all six `onclick` generation spots.
-- **app.js**: Updated three `.find()` calls to use robust string comparison.
-
-> [!NOTE]
-> These changes make the application more resilient to different database ID formats and prevent standard JavaScript reference errors in the browser console.
-';
+                    document.getElementById('transaction-modal-title').textContent = 'Add New Transaction';
                     document.getElementById('transaction-submit-btn').textContent = 'Save Transaction';
                     modals.transaction.form.reset();
                 }
